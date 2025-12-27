@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe Técnico de Seguridad</title>
+
+<style>
+:root {
+  --primary:#1e88e5;
+  --primary-dark:#1565c0;
+  --bg:#f5f7fa;
+  --card:#ffffff;
+  --text:#263238;
+  --muted:#546e7a;
+  --ok:#2e7d32;
+  --warn:#f9a825;
+  --shadow:0 4px 12px rgba(0,0,0,.08);
+  --radius:12px;
+}
+*{box-sizing:border-box;font-family:Roboto,Segoe UI,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text)}
+header{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;padding:32px;box-shadow:var(--shadow)
+}
+header h1{margin:0;font-weight:500}
+header p{opacity:.9}
+main{max-width:1100px;margin:32px auto;padding:0 20px}
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:24px;
+  margin-bottom:24px
+}
+h2{margin-top:0;color:var(--primary-dark)}
+h3{color:var(--primary)}
+.meta{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px
+}
+.meta div{
+  background:#eef3f8;
+  border-radius:10px;
+  padding:12px 16px
+}
+.meta span{display:block;font-size:.85rem;color:var(--muted)}
+.badge{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:20px;
+  font-size:.75rem;
+  font-weight:500;
+  color:#fff
+}
+.ok{background:var(--ok)}
+.warn{background:var(--warn)}
+pre{
+  background:#0f172a;
+  color:#e2e8f0;
+  padding:16px;
+  border-radius:10px;
+  overflow-x:auto;
+  font-size:.85rem
+}
+footer{
+  text-align:center;
+  padding:20px;
+  font-size:.8rem;
+  color:var(--muted)
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Informe Técnico de Seguridad</h1>
+  <p>Evento de tráfico anómalo – análisis y mitigación preventiva</p>
+</header>
+
+<main>
+
+<section class="card">
+<h2>1. Resumen Ejecutivo</h2>
+<p>
+Se detectó tráfico TCP anómalo proveniente del rango <strong>177.8.0.0/16</strong>, caracterizado por múltiples
+conexiones en estado <code>SYN_RECV</code>. El patrón observado corresponde a un evento de
+<strong>baja entropía, no dirigido y de bajo volumen</strong>.
+</p>
+<p>
+No se observaron impactos en la estabilidad del servicio previo a la aplicación de medidas de mitigación.
+El bloqueo aplicado tuvo carácter <strong>preventivo</strong>.
+</p>
+
+<div class="meta">
+  <div><span>Clasificación</span>Security Event – Informativo</div>
+  <div><span>Rango Origen</span>177.8.0.0/16</div>
+  <div><span>ASN</span>AS270581 (Único)</div>
+  <div><span>Estado</span><span class="badge ok">Sin impacto</span></div>
+</div>
+</section>
+
+<section class="card">
+<h2>2. Contexto del Servicio</h2>
+<ul>
+<li>Servidor con función principal de <strong>DNS seguro</strong></li>
+<li>Servicios activos:
+  <ul>
+    <li>DNS over HTTPS (DoH)</li>
+    <li>DNS over TLS (DoT)</li>
+  </ul>
+</li>
+<li><strong>Strict SNI habilitado</strong> para validación estricta de nombres</li>
+<li><strong>Protección TCP SYN flood activa a nivel kernel</strong></li>
+</ul>
+<p>
+Estas medidas contribuyeron a la absorción del tráfico sin degradación del servicio.
+</p>
+</section>
+
+<section class="card">
+<h2>3. Evidencia Técnica – netstat (previo a remediación)</h2>
+<pre>
+177.8.134.156:13379 SYN_RECV
+177.8.134.144:29898 SYN_RECV
+177.8.132.117:53273 SYN_RECV
+177.8.133.248:3149  SYN_RECV
+177.8.135.236:44113 SYN_RECV
+...
+</pre>
+
+<ul>
+<li>Variación de los últimos octetos</li>
+<li>Puertos de origen aleatorios</li>
+<li>Destino HTTPS</li>
+<li>Handshake TCP no completado</li>
+</ul>
+</section>
+
+<section class="card">
+<h2>4. Métricas Reales del Evento</h2>
+<p>
+Los contadores del ipset <code>badisp</code> ya contenían tráfico histórico. La diferencia observada fue:
+</p>
+
+<ul>
+<li>Contador inicial: ~427.000 paquetes</li>
+<li>Contador final: ~445.000 paquetes</li>
+<li><strong>Tráfico atribuible al evento: ~18.000 paquetes (~1 MB)</strong></li>
+</ul>
+
+<p>
+Este volumen se considera bajo y sin capacidad de impacto operativo.
+</p>
+</section>
+
+<section class="card">
+<h2>5. Análisis de Origen y Reputación</h2>
+
+<ul>
+<li>ASN único: <strong>AS270581</strong></li>
+<li>ISP: JET NETWORK TELECOMUNICAÇÃO LTDA</li>
+<li>Tipo de uso: Acceso residencial / línea fija</li>
+<li>País: Brasil</li>
+<li>Reputación (AbuseIPDB): 20% – 3 reportes</li>
+</ul>
+
+<p>
+No se observaron múltiples ASN ni infraestructura distribuida, lo que descarta
+la presencia de una botnet controlada o coordinada.
+</p>
+
+<p><strong>Muestra de IP del rango para correlación:</strong></p>
+<pre>
+177.8.134.120
+Hostname: 177.8.134-120.jetnetwork.net.br
+ASN: AS270581
+</pre>
+</section>
+
+<section class="card">
+<h2>6. Conclusión Final</h2>
+<p>
+El evento corresponde a tráfico automatizado oportunista de baja intensidad,
+originado desde clientes finales de un único ISP. No se evidenció impacto
+operativo ni intención dirigida. Las medidas aplicadas fueron preventivas y
+alineadas con buenas prácticas de seguridad perimetral.
+</p>
+
+<p>
+<strong>El evento se clasifica como informativo y no como incidente de seguridad.</strong>
+</p>
+</section>
+
+</main>
+
+<footer>
+Informe técnico – Seguridad de la Información
+</footer>
+
+</body>
+</html>

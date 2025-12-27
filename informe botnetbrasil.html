@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Informe Técnico – Análisis de Tráfico SYN Persistente</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --danger: #f87171;
+      --ok: #4ade80;
+      --warn: #facc15;
+      --border: #1f2937;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      padding: 2rem;
+      background: linear-gradient(135deg, #020617, #020617 60%, #020617);
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      color: var(--accent);
+    }
+
+    header p {
+      margin: 0.5rem 0 0;
+      color: var(--muted);
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    section h2 {
+      margin-top: 0;
+      color: var(--accent);
+      font-size: 1.3rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.6rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    code, pre {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.8rem;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      display: block;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+
+    .ok { background: rgba(74, 222, 128, 0.15); color: var(--ok); }
+    .warn { background: rgba(250, 204, 21, 0.15); color: var(--warn); }
+    .danger { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 2rem;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Informe Técnico – Análisis de Tráfico SYN Persistente</h1>
+  <p>
+    Incidente de ruido de red / SYN flood de bajo volumen<br />
+    Fecha del análisis: <strong>2025-12-15</strong><br />
+    Sistema afectado: <strong>Servidor DNS público (AdGuard Home)</strong>
+  </p>
+</header>
+
+<main>
+
+  <section>
+    <h2>1. Resumen Ejecutivo</h2>
+    <p>
+      Durante tareas rutinarias de observabilidad se detectó un volumen sostenido
+      de conexiones TCP en estado <code>SYN_RECV</code> hacia los puertos públicos
+      <strong>443 (DoH)</strong> y <strong>853 (DoT)</strong>.
+    </p>
+    <p>
+      El tráfico provenía mayoritariamente de un rango IP específico
+      (<strong>177.36.0.0/16</strong>) y presentaba características de
+      <strong>ruido automatizado persistente</strong>, sin evidencia de explotación,
+      intrusión o impacto funcional en los servicios.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Entorno Técnico</h2>
+    <table>
+      <tr><th>Servicio</th><td>AdGuard Home</td></tr>
+      <tr><th>Tipo</th><td>DNS público cifrado</td></tr>
+      <tr><th>Protocolos</th><td>DoH (443/TCP), DoT (853/TCP)</td></tr>
+      <tr><th>TLS</th><td>TLS 1.3 – ChaCha20-Poly1305</td></tr>
+      <tr><th>Sistema Operativo</th><td>Linux moderno</td></tr>
+      <tr><th>Protecciones activas</th>
+        <td>
+          TCP SYN cookies (<code>net.ipv4.tcp_syncookies=1</code>),
+          backlog TCP (<code>4096</code>),
+          firewall iptables,
+          Fail2Ban
+        </td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. Observaciones Técnicas</h2>
+    <ul>
+      <li>Estados <code>SYN_RECV</code> fluctuantes pero estables (≈ 50–70).</li>
+      <li>No se observaron conexiones <code>ESTABLISHED</code> desde el rango afectado.</li>
+      <li>No se completaron handshakes TLS válidos desde dichas IPs.</li>
+      <li>No hubo impacto en clientes DNS legítimos.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Evidencia de Persistencia</h2>
+    <p>
+      Tras aplicar un bloqueo a nivel firewall del rango <strong>177.36.0.0/16</strong>,
+      se observaron incrementos continuos en los contadores de paquetes descartados:
+    </p>
+
+    <pre>
+DROP 177.36.0.0/16
+Lectura 1:  9424 paquetes
+Lectura 2:  9931 paquetes
+Lectura 3: 10071 paquetes
+    </pre>
+
+    <p>
+      Esto confirma <strong>persistencia del tráfico</strong>, consistente con
+      bots o escáneres automáticos que no implementan lógica de retroalimentación
+      ante timeouts o bloqueos silenciosos.
+    </p>
+  </section>
+
+  <section>
+    <h2>5. Datos de Reputación (AbuseIPDB – IP de Muestra)</h2>
+    <p>
+      Se analizó una IP representativa del rango bloqueado:
+      <strong>177.36.18.219</strong>
+    </p>
+
+    <table>
+      <tr><th>IP</th><td>177.36.18.219</td></tr>
+      <tr><th>Reportes</th><td>15</td></tr>
+      <tr><th>Confidence of Abuse</th><td>33% <span class="badge warn">Moderado</span></td></tr>
+      <tr><th>ISP</th><td>BOT INTERNET E SERVICOS DE TELECOMUNICACOES LTDA</td></tr>
+      <tr><th>ASN</th><td>AS271042</td></tr>
+      <tr><th>Hostname</th><td>219-18-36-177.botinternet.com.br</td></tr>
+      <tr><th>Dominio</th><td>bot.com.br</td></tr>
+      <tr><th>País</th><td>Brasil 🇧🇷</td></tr>
+      <tr><th>Ciudad</th><td>Belo Horizonte, Minas Gerais</td></tr>
+      <tr><th>Tipo de uso</th><td>ISP de línea fija</td></tr>
+    </table>
+
+    <p>
+      La reputación es consistente con tráfico automatizado o equipos comprometidos
+      detrás de infraestructura residencial o CGNAT.
+    </p>
+  </section>
+
+  <section>
+    <h2>6. Acciones Tomadas</h2>
+    <ul>
+      <li>Monitoreo de estados TCP (<code>ss</code>, <code>SYN_RECV</code>).</li>
+      <li>Análisis de persistencia mediante contadores de firewall.</li>
+      <li>Bloqueo preventivo del rango <strong>177.36.0.0/16</strong> en iptables.</li>
+      <li>Validación de continuidad del servicio DNS cifrado.</li>
+    </ul>
+
+    <pre>
+iptables -I INPUT -s 177.36.0.0/16 -j DROP
+    </pre>
+  </section>
+
+  <section>
+    <h2>7. Evaluación de Riesgo</h2>
+    <table>
+      <tr>
+        <th>Aspecto</th><th>Evaluación</th>
+      </tr>
+      <tr>
+        <td>Intrusión / compromiso</td>
+        <td><span class="badge ok">No observado</span></td>
+      </tr>
+      <tr>
+        <td>Impacto en servicio</td>
+        <td><span class="badge ok">Nulo</span></td>
+      </tr>
+      <tr>
+        <td>Tipo de tráfico</td>
+        <td><span class="badge warn">Ruido automatizado persistente</span></td>
+      </tr>
+      <tr>
+        <td>Riesgo global estimado</td>
+        <td><strong>≈ 6 / 100</strong></td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>8. Conclusión</h2>
+    <p>
+      El evento corresponde a <strong>ruido de red automatizado persistente</strong>,
+      sin evidencia de ataque dirigido ni intento de explotación.
+    </p>
+    <p>
+      El bloqueo aplicado es <strong>proporcionado, reversible y efectivo</strong>,
+      y reduce carga innecesaria sobre el stack TCP sin afectar a clientes legítimos.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  Informe generado para documentación interna – 2025-12-15<br />
+  Administración de sistemas / Seguridad de red
+</footer>
+
+</body>
+</html>

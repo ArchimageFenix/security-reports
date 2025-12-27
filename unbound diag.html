@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Informe Técnico de Rendimiento DNS - AdGuard Home + Unbound</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 40px;
+      background: #f7f9fb;
+      color: #222;
+    }
+    h1, h2, h3 {
+      color: #1f3a5f;
+    }
+    code, pre {
+      background: #eef2f7;
+      padding: 10px;
+      display: block;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 20px 0;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background: #e6ecf3;
+    }
+    .ok {
+      color: #1a7f37;
+      font-weight: bold;
+    }
+    .note {
+      background: #fff3cd;
+      padding: 12px;
+      border-left: 5px solid #ffcc00;
+      margin: 20px 0;
+    }
+    .conclusion {
+      background: #e8f5e9;
+      padding: 15px;
+      border-left: 6px solid #2e7d32;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Informe Técnico de Rendimiento y Coherencia Estadística</h1>
+<h2>Arquitectura DNS: AdGuard Home (Edge) + Unbound (Core)</h2>
+
+<p>
+Este informe analiza el comportamiento, rendimiento y coherencia estadística
+de una arquitectura DNS compuesta por <strong>AdGuard Home</strong> expuesto como
+resolver cifrado (DoH/DoT) en el edge, y <strong>Unbound</strong> como resolvedor recursivo
+local aislado en <code>127.0.0.1</code>.
+</p>
+
+<hr>
+
+<h2>1. Arquitectura Analizada</h2>
+
+<pre>
+Clientes (Internet / LAN)
+ └── DNS cifrado (DoH :443 / DoT :853)
+        ↓
+     AdGuard Home (EDGE)
+     - Filtrado
+     - Cache primario
+     - Optimistic Cache
+        ↓
+     Unbound (CORE)
+     - Recursión completa
+     - DNSSEC
+     - Cache secundario
+</pre>
+
+<p>
+Este diseño sigue buenas prácticas de seguridad al exponer únicamente el
+edge y mantener el resolvedor recursivo fuera de la superficie de ataque.
+</p>
+
+<hr>
+
+<h2>2. Estadísticas Globales de Tráfico (AdGuard Home)</h2>
+
+<table>
+  <tr>
+    <th>Métrica</th>
+    <th>Valor</th>
+  </tr>
+  <tr>
+    <td>DNS Queries totales</td>
+    <td>75,556</td>
+  </tr>
+  <tr>
+    <td>Consultas bloqueadas</td>
+    <td>25,303 (33.49%)</td>
+  </tr>
+  <tr>
+    <td>Consultas permitidas</td>
+    <td>50,253 (66.51%)</td>
+  </tr>
+</table>
+
+<p>
+AdGuard Home elimina aproximadamente <strong>1 de cada 3 consultas</strong> antes de que
+alcancen cualquier upstream, reduciendo latencia, carga y exposición externa.
+</p>
+
+<hr>
+
+<h2>3. Tráfico Real Enviado a Unbound</h2>
+
+<table>
+  <tr>
+    <th>Métrica</th>
+    <th>Valor</th>
+  </tr>
+  <tr>
+    <td>Consultas enviadas a Unbound (24h)</td>
+    <td>2,345</td>
+  </tr>
+  <tr>
+    <td>Porcentaje sobre consultas permitidas</td>
+    <td>≈ 4.7%</td>
+  </tr>
+</table>
+
+<p class="ok">
+Esto indica que aproximadamente el 95% del tráfico permitido es absorbido
+por el caché del edge (AdGuard Home).
+</p>
+
+<hr>
+
+<h2>4. Estadísticas Internas de Unbound</h2>
+
+<table>
+  <tr>
+    <th>Métrica</th>
+    <th>Valor</th>
+  </tr>
+  <tr>
+    <td>Queries totales</td>
+    <td>103 (en ventana de ~3 min)</td>
+  </tr>
+  <tr>
+    <td>Cache hits</td>
+    <td>4</td>
+  </tr>
+  <tr>
+    <td>Cache misses</td>
+    <td>99</td>
+  </tr>
+  <tr>
+    <td>Prefetch</td>
+    <td>2</td>
+  </tr>
+  <tr>
+    <td>Latencia media de recursión</td>
+    <td>~73 ms</td>
+  </tr>
+  <tr>
+    <td>Latencia mediana</td>
+    <td>~38 ms</td>
+  </tr>
+</table>
+
+<p>
+El bajo ratio de cache hits en Unbound es coherente con la presencia de un
+caché frontal agresivo. Unbound solo recibe consultas nuevas o poco repetidas.
+</p>
+
+<hr>
+
+<h2>5. Tiempo Medio del Upstream según AdGuard Home</h2>
+
+<table>
+  <tr>
+    <th>Upstream</th>
+    <th>Tiempo medio</th>
+  </tr>
+  <tr>
+    <td>127.0.0.1:5335 (Unbound)</td>
+    <td>126 ms</td>
+  </tr>
+</table>
+
+<div class="note">
+Este valor representa el <strong>tiempo total end-to-end</strong> de resolución
+recursiva en Internet, no latencia localhost.
+</div>
+
+<p>
+El valor es consistente con:
+</p>
+<ul>
+  <li>Resolución recursiva completa (root → TLD → autoritativo)</li>
+  <li>Validación DNSSEC</li>
+  <li>Dominios no cacheados previamente</li>
+</ul>
+
+<hr>
+
+<h2>6. Coherencia Estadística Entre Capas</h2>
+
+<table>
+  <tr>
+    <th>Aspecto</th>
+    <th>AdGuard Home</th>
+    <th>Unbound</th>
+    <th>Resultado</th>
+  </tr>
+  <tr>
+    <td>Alto volumen de tráfico</td>
+    <td>Sí</td>
+    <td>No</td>
+    <td class="ok">Coherente</td>
+  </tr>
+  <tr>
+    <td>Alta tasa de bloqueo</td>
+    <td>Sí</td>
+    <td>N/A</td>
+    <td class="ok">Coherente</td>
+  </tr>
+  <tr>
+    <td>Uso intensivo de caché</td>
+    <td>Sí</td>
+    <td>Bajo</td>
+    <td class="ok">Esperado</td>
+  </tr>
+  <tr>
+    <td>Latencia estable</td>
+    <td>Sí</td>
+    <td>Sí</td>
+    <td class="ok">Correcto</td>
+  </tr>
+</table>
+
+<hr>
+
+<h2>7. Diagnóstico de Rendimiento</h2>
+
+<ul>
+  <li>AdGuard Home actúa correctamente como <strong>caché primario y filtro</strong></li>
+  <li>Unbound no presenta señales de estrés ni saturación</li>
+  <li>No existen colas, drops ni latencias anómalas</li>
+  <li>El uso de TLS no introduce impacto significativo</li>
+</ul>
+
+<hr>
+
+<div class="conclusion">
+<h2>Conclusión Final</h2>
+<p>
+La arquitectura DNS analizada presenta un comportamiento <strong>óptimo, coherente
+y eficiente</strong>. El edge absorbe la mayoría del tráfico y bloqueos, mientras
+Unbound opera como resolvedor recursivo estable y protegido.
+</p>
+
+<p>
+No se observan cuellos de botella, degradación de rendimiento ni incoherencias
+estadísticas entre las capas del sistema.
+</p>
+</div>
+
+</body>
+</html>

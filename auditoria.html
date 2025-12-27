@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Timeline Forense de Logs TLS/DNS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #020617;
+      --bg-alt: #02091f;
+      --card: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.16);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: rgba(148, 163, 184, 0.25);
+      --danger: #f97373;
+      --warn: #facc15;
+      --ok: #4ade80;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #0b1120 0, #020617 45%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 25% 25%, #a5b4fc, #38bdf8, #0f172a);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #020617;
+      font-size: 0.9rem;
+      box-shadow:
+        0 0 25px rgba(56, 189, 248, 0.8),
+        0 0 60px rgba(129, 140, 248, 0.3);
+    }
+
+    .subtitle {
+      font-size: 0.86rem;
+      color: var(--muted);
+      max-width: 580px;
+    }
+
+    .note {
+      font-size: 0.7rem;
+      color: var(--muted);
+      opacity: 0.75;
+      text-align: right;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.5fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      box-shadow:
+        0 18px 40px rgba(15,23,42,0.9),
+        0 0 0 1px rgba(15,23,42,0.9);
+      backdrop-filter: blur(22px);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.6rem;
+      gap: 0.4rem;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tag {
+      font-size: 0.68rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.4);
+      color: var(--muted);
+      background: rgba(15,23,42,0.9);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 230px;
+      max-height: 420px;
+      resize: vertical;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 0.7rem;
+      background: rgba(15,23,42,0.94);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.6);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    button {
+      border-radius: 999px;
+      padding: 0.4rem 0.9rem;
+      border: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: radial-gradient(circle at 20% 0%, #38bdf8, #0ea5e9, #0369a1);
+      color: #020617;
+      box-shadow:
+        0 12px 28px rgba(56, 189, 248, 0.6),
+        0 0 0 1px rgba(8, 47, 73, 0.9);
+      white-space: nowrap;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.08s ease;
+    }
+
+    button.secondary {
+      background: rgba(15,23,42,0.95);
+      color: var(--muted);
+      box-shadow: none;
+      border: 1px solid rgba(148,163,184,0.5);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 18px 40px rgba(56,189,248,0.55),
+        0 0 0 1px rgba(8,47,73,0.9);
+    }
+
+    button.secondary:hover {
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.85);
+    }
+
+    button:active {
+      transform: translateY(0);
+      opacity: 0.96;
+      box-shadow:
+        0 10px 22px rgba(15,23,42,0.95),
+        0 0 0 1px rgba(15,23,42,1);
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.4);
+      color: var(--muted);
+      background: rgba(15,23,42,0.9);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+    }
+
+    .stat {
+      padding: 0.55rem 0.6rem;
+      border-radius: 10px;
+      background: rgba(15,23,42,0.96);
+      border: 1px solid rgba(148,163,184,0.3);
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-bottom: 0.1rem;
+    }
+
+    .stat-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .stat-hint {
+      font-size: 0.64rem;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .filter-bar input {
+      flex: 1;
+      min-width: 150px;
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      border: 1px solid rgba(148,163,184,0.5);
+      background: rgba(15,23,42,0.96);
+      color: var(--text);
+      font-size: 0.8rem;
+    }
+
+    .filter-bar input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.6);
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 1.1rem;
+      max-height: 420px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148,163,184,0.9) rgba(15,23,42,0.95);
+    }
+
+    .timeline::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .timeline::-webkit-scrollbar-track {
+      background: rgba(15,23,42,0.95);
+    }
+
+    .timeline::-webkit-scrollbar-thumb {
+      background: rgba(148,163,184,0.9);
+      border-radius: 999px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 0.2rem;
+      bottom: 0.2rem;
+      width: 2px;
+      background: linear-gradient(to bottom, rgba(56,189,248,0.85), rgba(56,189,248,0.15));
+    }
+
+    .event {
+      position: relative;
+      padding-left: 0.8rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .event-dot {
+      position: absolute;
+      left: -3px;
+      top: 0.45rem;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      border: 2px solid var(--bg);
+      background: var(--accent);
+      box-shadow: 0 0 11px rgba(56,189,248,0.9);
+    }
+
+    .event-card {
+      background: rgba(15,23,42,0.98);
+      border-radius: 10px;
+      padding: 0.45rem 0.6rem;
+      border: 1px solid rgba(148,163,184,0.35);
+      font-size: 0.78rem;
+    }
+
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.18rem;
+    }
+
+    .event-time {
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    .event-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      align-items: center;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .pill {
+      padding: 0.12rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      border: 1px solid rgba(148,163,184,0.4);
+      background: rgba(15,23,42,0.98);
+    }
+
+    .pill-ip {
+      border-color: rgba(56,189,248,0.8);
+      color: var(--accent);
+    }
+
+    .pill-port443 {
+      border-color: rgba(248, 113, 113, 0.9);
+      color: var(--danger);
+    }
+
+    .pill-port853 {
+      border-color: rgba(250, 204, 21, 0.9);
+      color: var(--warn);
+    }
+
+    .pill-cat {
+      border-color: rgba(74,222,128,0.9);
+      color: var(--ok);
+    }
+
+    .event-message {
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    .empty-state {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 1.1rem 0;
+      text-align: center;
+    }
+
+    .empty-state span {
+      display: block;
+      font-size: 1.5rem;
+      margin-bottom: 0.3rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <div class="title">
+          <span class="logo">TL</span>
+          Timeline Forense TLS / DNS
+        </div>
+        <div class="subtitle">
+          Herramienta local para analizar patrones de comportamiento (handshakes TLS fallidos, resets, versiones obsoletas, etc.)
+          en base al formato: <strong>Fecha/Hora | Servicio | Mensaje</strong>.
+        </div>
+      </div>
+      <div class="note">
+        Todo se procesa en tu navegador · No se envía nada a ningún servidor
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- IZQUIERDA: INPUT + STATS -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            Entrada de log
+            <span class="tag">formato tipo bash: Fecha/Hora | Servicio | Mensaje</span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="parseBtn">⚡ Analizar línea de tiempo</button>
+          <button id="clearBtn" class="secondary">🧹 Limpiar</button>
+          <span id="statusBadge" class="badge">0 eventos</span>
+        </div>
+
+        <textarea id="logInput" placeholder="Pega aquí líneas como las de tu ejemplo:
+Dec 08 21:52:45      | zorin              | AdGuardHome[249823]: 2025/12/08 21:52:45.310654 [error] service: http: TLS handshake error from 212.102.40.218:4986: read tcp 10.0.0.120:443-&gt;212.102.40.218:4986: read: connection reset by peer server=https
+..."></textarea>
+
+        <div class="stats-grid">
+          <div class="stat">
+            <div class="stat-label">Rango temporal</div>
+            <div class="stat-value" id="rangeStat">–</div>
+            <div class="stat-hint">Primer → último evento detectado</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">IP(s) remotas</div>
+            <div class="stat-value" id="ipCountStat">–</div>
+            <div class="stat-hint" id="ipSampleStat">–</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Puertos/servicios</div>
+            <div class="stat-value" id="portCountStat">–</div>
+            <div class="stat-hint" id="portSampleStat">–</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Tipos de error</div>
+            <div class="stat-value" id="catCountStat">–</div>
+            <div class="stat-hint" id="catSampleStat">–</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DERECHA: TIMELINE + FILTRO -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            Línea de tiempo de eventos
+            <span class="tag">orden cronológico del log</span>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <input id="filterInput" type="text" placeholder="Filtrar por IP, puerto (443/853), tipo de error, texto..." />
+          <span id="visibleBadge" class="badge">0 visibles</span>
+        </div>
+
+        <div id="timeline" class="timeline">
+          <div class="empty-state">
+            <span>🛰️</span>
+            Sin datos aún. Pega tu log a la izquierda y pulsa <strong>“Analizar línea de tiempo”</strong>.
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const logInput = document.getElementById("logInput");
+    const parseBtn = document.getElementById("parseBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusBadge = document.getElementById("statusBadge");
+    const timeline = document.getElementById("timeline");
+    const filterInput = document.getElementById("filterInput");
+    const visibleBadge = document.getElementById("visibleBadge");
+
+    const rangeStat = document.getElementById("rangeStat");
+    const ipCountStat = document.getElementById("ipCountStat");
+    const ipSampleStat = document.getElementById("ipSampleStat");
+    const portCountStat = document.getElementById("portCountStat");
+    const portSampleStat = document.getElementById("portSampleStat");
+    const catCountStat = document.getElementById("catCountStat");
+    const catSampleStat = document.getElementById("catSampleStat");
+
+    const monthMap = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+
+    let events = [];
+
+    function parseLine(line) {
+      // Formato específico: "Dec 08 21:52:45      | zorin              | Mensaje..."
+      const re = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{2})\s+(\d{2}:\d{2}:\d{2})\s*\|\s*([^|]+?)\s*\|\s*(.+)$/;
+      const m = line.match(re);
+      if (!m) return null;
+
+      const mon = m[1];
+      const day = parseInt(m[2], 10);
+      const time = m[3];
+      const service = m[4].trim();
+      const message = m[5].trim();
+
+      const nowYear = new Date().getFullYear();
+      const [hh, mm, ss] = time.split(":").map(Number);
+      const date = new Date(nowYear, monthMap[mon], day, hh, mm, ss);
+
+      // IP remota: después de "from " o en el tcp arrow
+      let ip = null;
+      let port = null;
+
+      const fromRe = /from\s+(\d{1,3}(?:\.\d{1,3}){3}):(\d+)/;
+      const arrowRe = /->(\d{1,3}(?:\.\d{1,3}){3}):(\d+)/;
+
+      let m2 = message.match(fromRe);
+      if (m2) {
+        ip = m2[1];
+        port = m2[2];
+      } else {
+        m2 = message.match(arrowRe);
+        if (m2) {
+          ip = m2[1];
+          port = m2[2];
+        }
+      }
+
+      // detectar puerto del servidor local (443 / 853)
+      let localPort = null;
+      const localPortRe = /10\.0\.0\.120:(\d{2,5})->/; // adaptado a tu log de ejemplo
+      const mLocal = message.match(localPortRe);
+      if (mLocal) {
+        localPort = mLocal[1];
+      } else if (message.includes("853->")) {
+        localPort = "853";
+      } else if (message.includes("443->")) {
+        localPort = "443";
+      }
+
+      // Categoría de error
+      let category = "Otro";
+      if (message.includes("no cipher suite")) {
+        category = "Cipher no compatible";
+      } else if (message.includes("offered only unsupported versions")) {
+        category = "Versiones TLS obsoletas";
+      } else if (message.includes("requested unsupported application protocols")) {
+        category = "ALPN / protocolos app no soportados";
+      } else if (message.includes("connection reset by peer")) {
+        category = "RST por el peer";
+      } else if (message.includes("dnsproxy")) {
+        category = "DNS sobre TCP/TLS reset";
+      } else if (message.toLowerCase().includes("tls handshake error")) {
+        category = "Error genérico TLS handshake";
+      }
+
+      return {
+        raw: line,
+        date,
+        mon,
+        day,
+        time,
+        service,
+        message,
+        ip,
+        port,
+        localPort,
+        category
+      };
+    }
+
+    function parseLogText(text) {
+      const lines = text.split(/\r?\n/);
+      const out = [];
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (trimmed.startsWith("Fecha/Hora") || trimmed.startsWith("---")) continue;
+        const ev = parseLine(trimmed);
+        if (ev) out.push(ev);
+      }
+      // ya vienen ordenados por el log, pero por si acaso:
+      out.sort((a, b) => a.date - b.date);
+      return out;
+    }
+
+    function formatDate(d) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function renderStats(evts) {
+      statusBadge.textContent = `${evts.length} eventos`;
+
+      if (!evts.length) {
+        rangeStat.textContent = "–";
+        ipCountStat.textContent = "–";
+        ipSampleStat.textContent = "–";
+        portCountStat.textContent = "–";
+        portSampleStat.textContent = "–";
+        catCountStat.textContent = "–";
+        catSampleStat.textContent = "–";
+        return;
+      }
+
+      const first = evts[0].date;
+      const last = evts[evts.length - 1].date;
+      rangeStat.textContent = `${formatDate(first)} → ${formatDate(last)}`;
+
+      const ipMap = new Map();
+      const portMap = new Map();
+      const catMap = new Map();
+
+      for (const e of evts) {
+        if (e.ip) ipMap.set(e.ip, (ipMap.get(e.ip) || 0) + 1);
+        if (e.localPort) portMap.set(e.localPort, (portMap.get(e.localPort) || 0) + 1);
+        if (e.category) catMap.set(e.category, (catMap.get(e.category) || 0) + 1);
+      }
+
+      const ipArr = Array.from(ipMap.entries()).sort((a,b)=>b[1]-a[1]);
+      const portArr = Array.from(portMap.entries()).sort((a,b)=>b[1]-a[1]);
+      const catArr = Array.from(catMap.entries()).sort((a,b)=>b[1]-a[1]);
+
+      ipCountStat.textContent = ipArr.length || "0";
+      ipSampleStat.textContent = ipArr.length
+        ? "Top: " + ipArr.slice(0,3).map(([ip,c])=>`${ip} (${c})`).join(", ")
+        : "Sin IP remota detectada";
+
+      portCountStat.textContent = portArr.length || "0";
+      portSampleStat.textContent = portArr.length
+        ? "Top: " + portArr.slice(0,3).map(([p,c])=>`${p} (${c})`).join(", ")
+        : "Sin puertos detectados";
+
+      catCountStat.textContent = catArr.length || "0";
+      catSampleStat.textContent = catArr.length
+        ? "Top: " + catArr.slice(0,3).map(([cat,c])=>`${cat} (${c})`).join(", ")
+        : "Sin clasificación clara";
+    }
+
+    function renderTimeline(evts, filterText) {
+      timeline.innerHTML = "";
+      filterText = (filterText || "").toLowerCase().trim();
+
+      if (!evts.length) {
+        timeline.innerHTML = `
+          <div class="empty-state">
+            <span>🛰️</span>
+            Sin eventos procesados. Pega tu log a la izquierda y analiza.
+          </div>`;
+        visibleBadge.textContent = "0 visibles";
+        return;
+      }
+
+      let visible = 0;
+
+      for (const e of evts) {
+        const searchBlob = [
+          e.raw,
+          e.service,
+          e.ip || "",
+          e.category || "",
+          e.localPort || "",
+          e.time
+        ].join(" ").toLowerCase();
+
+        if (filterText && !searchBlob.includes(filterText)) continue;
+
+        visible++;
+
+        const div = document.createElement("div");
+        div.className = "event";
+
+        const portPillClass = e.localPort === "443" ? "pill pill-port443"
+                           : e.localPort === "853" ? "pill pill-port853"
+                           : "pill";
+
+        const ipPill = e.ip ? `<span class="pill pill-ip">IP ${e.ip}</span>` : "";
+        const portPill = e.localPort ? `<span class="${portPillClass}">Puerto local ${e.localPort}</span>` : "";
+        const catPill = e.category ? `<span class="pill pill-cat">${e.category}</span>` : "";
+
+        div.innerHTML = `
+          <div class="event-dot"></div>
+          <div class="event-card">
+            <div class="event-header">
+              <div class="event-time">${formatDate(e.date)}</div>
+              <div class="event-meta">
+                ${ipPill}
+                ${portPill}
+                ${catPill}
+              </div>
+            </div>
+            <div class="event-message">${e.message.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
+          </div>
+        `;
+
+        timeline.appendChild(div);
+      }
+
+      if (!visible) {
+        timeline.innerHTML = `
+          <div class="empty-state">
+            <span>🔍</span>
+            No hay eventos que coincidan con el filtro actual.
+          </div>`;
+      }
+
+      visibleBadge.textContent = `${visible} visibles`;
+    }
+
+    parseBtn.addEventListener("click", () => {
+      const raw = logInput.value.trim();
+      if (!raw) {
+        alert("Pega primero el log de tu script (las líneas con Fecha/Hora | Servicio | Mensaje).");
+        return;
+      }
+      events = parseLogText(raw);
+      renderStats(events);
+      renderTimeline(events, filterInput.value);
+    });
+
+    clearBtn.addEventListener("click", () => {
+      logInput.value = "";
+      events = [];
+      renderStats(events);
+      renderTimeline(events, "");
+      filterInput.value = "";
+    });
+
+    filterInput.addEventListener("input", () => {
+      renderTimeline(events, filterInput.value);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe Final de Seguridad – Panel Web AdGuard Home</title>
+
+<style>
+:root {
+  --bg: #020617;
+  --panel: #0f172a;
+  --card: #111827;
+  --border: #1e293b;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --ok: #22c55e;
+  --warn: #facc15;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell;
+  background: linear-gradient(135deg, #020617, #020617);
+  color: var(--text);
+}
+
+header {
+  padding: 2.5rem;
+  border-bottom: 1px solid var(--border);
+  background:
+    radial-gradient(circle at top left, #0ea5e9 0%, transparent 35%);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+header p {
+  margin-top: .75rem;
+  color: var(--muted);
+  max-width: 900px;
+}
+
+main {
+  max-width: 1100px;
+  margin: auto;
+  padding: 2rem;
+  display: grid;
+  gap: 1.75rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.75rem;
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+
+.badge {
+  padding: .25rem .65rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.badge.ok { background: #052e1a; color: var(--ok); }
+.badge.warn { background: #3a2f0b; color: var(--warn); }
+
+.section {
+  margin-top: 1rem;
+}
+
+.timeline {
+  border-left: 2px solid var(--border);
+  padding-left: 1.2rem;
+  margin-top: 1rem;
+}
+
+.event {
+  margin-bottom: 1.2rem;
+  position: relative;
+}
+
+.event::before {
+  content: "";
+  position: absolute;
+  left: -1.45rem;
+  top: .35rem;
+  width: .85rem;
+  height: .85rem;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+.event time {
+  color: var(--accent);
+  font-size: .85rem;
+}
+
+.event p {
+  margin: .35rem 0 0;
+  color: var(--muted);
+}
+
+ul {
+  margin: .6rem 0 0 1.2rem;
+}
+
+li {
+  margin-bottom: .4rem;
+}
+
+details {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  background: #020617;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  padding: 2.5rem;
+  font-size: .85rem;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Informe Final de Seguridad</h1>
+  <p>
+    Análisis detallado del comportamiento observado en los logs del módulo de
+    autenticación del panel web de AdGuard Home, incluyendo correlación temporal,
+    interpretación semántica, evaluación de riesgo y decisión operativa final.
+  </p>
+</header>
+
+<main>
+
+  <section class="card">
+    <h2>Resumen Ejecutivo <span class="badge ok">RIESGO BAJO</span></h2>
+    <p>
+      El análisis de los registros muestra actividad automatizada esporádica,
+      no persistente y sin adaptación. No se identifican indicios de ataque
+      dirigido, fuerza bruta ni enumeración efectiva. El sistema responde de
+      forma determinista y controlada, manteniendo un estado estable.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Ventana de Tiempo Representativa</h2>
+    <div class="timeline">
+      <div class="event">
+        <time>t0</time>
+        <p>Primer intento de autenticación fallido (credencial inválida).</p>
+      </div>
+      <div class="event">
+        <time>t0 + ~60 ms</time>
+        <p>Segundo intento fallido. Ritmo no humano.</p>
+      </div>
+      <div class="event">
+        <time>t0 + ~120 ms</time>
+        <p>Activación inmediata del cooldown (60 minutos).</p>
+      </div>
+      <div class="event">
+        <time>t0 + 200–900 ms</time>
+        <p>Ráfaga de intentos bloqueados. El cliente no detecta el bloqueo.</p>
+      </div>
+      <div class="event">
+        <time>t0 + ~1 s</time>
+        <p>Fin del contacto. No se observan más intentos.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Análisis Indirecto del Origen Más Ruidoso</h2>
+    <ul>
+      <li>Comportamiento completamente automatizado.</li>
+      <li>Proceso sin estado ni lógica de adaptación.</li>
+      <li>La ráfaga corresponde a un único <em>job</em> de escaneo.</li>
+      <li>El abandono ocurre por finalización del proceso, no por aprendizaje.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Correlación Temporal Global</h2>
+    <ul>
+      <li>Eventos separados por días, no por horas.</li>
+      <li>Frecuencia extremadamente baja.</li>
+      <li>Ausencia total de persistencia o seguimiento.</li>
+      <li>Silencio prolongado (&gt;29 h) tras el último evento.</li>
+    </ul>
+    <p class="section">
+      Este patrón es consistente con escaneo de fondo distribuido y descarta
+      campañas, targeting o presión sostenida sobre el servicio.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Evaluación de Riesgo</h2>
+    <ul>
+      <li><strong>Compromiso:</strong> <span class="badge ok">Muy bajo</span></li>
+      <li><strong>Fuerza bruta:</strong> <span class="badge ok">Nula</span></li>
+      <li><strong>Enumeración:</strong> <span class="badge ok">Muy baja</span></li>
+      <li><strong>Impacto operativo:</strong> <span class="badge ok">Despreciable</span></li>
+      <li><strong>Riesgo residual:</strong> <span class="badge warn">Estructural (0-day)</span></li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Decisión Operativa</h2>
+    <p>
+      El panel web permanece expuesto por necesidad funcional. Dadas las
+      condiciones observadas (baja frecuencia, ausencia de presión y respuesta
+      correcta del sistema), esta decisión es técnicamente defendible y no
+      constituye negligencia.
+    </p>
+    <p class="section">
+      La opción de ocultar o aislar el panel queda disponible como mejora futura,
+      no como acción urgente.
+    </p>
+  </section>
+
+  <details>
+    <summary>Conclusión técnica final</summary>
+    <p>
+      El sistema se encuentra en un estado de equilibrio estable. La actividad
+      observada corresponde a ruido automatizado común de Internet, sin señales
+      de interés sostenido ni capacidad ofensiva. La arquitectura actual mitiga
+      eficazmente este ruido con herramientas ligeras y un modelo coherente.
+    </p>
+    <p>
+      No se recomiendan cambios inmediatos. La observación continua y el ajuste
+      incremental siguen siendo la estrategia correcta.
+    </p>
+  </details>
+
+</main>
+
+<footer>
+  Informe técnico interno · Análisis basado en evidencia · Ingeniería bajo restricciones
+</footer>
+
+</body>
+</html>

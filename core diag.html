@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Informe Técnico – Estado de Salud CORE DNS (Unbound)</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 40px;
+      background: #f7f9fb;
+      color: #222;
+    }
+    h1, h2, h3 {
+      color: #1f3a5f;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 20px 0;
+      background: #ffffff;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    th {
+      background: #e6ecf3;
+    }
+    pre {
+      background: #eef2f7;
+      padding: 12px;
+      border-radius: 5px;
+    }
+    .ok {
+      color: #1a7f37;
+      font-weight: bold;
+    }
+    .warn {
+      background: #fff3cd;
+      padding: 12px;
+      border-left: 5px solid #ffcc00;
+      margin: 20px 0;
+    }
+    .good {
+      background: #e8f5e9;
+      padding: 15px;
+      border-left: 6px solid #2e7d32;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Informe Técnico de Estado de Salud</h1>
+<h2>CORE DNS – Unbound</h2>
+
+<p>
+Este documento analiza exclusivamente el comportamiento, rendimiento y
+estado operativo del resolvedor recursivo <strong>Unbound</strong>, operando
+como CORE DNS aislado y no expuesto.
+</p>
+
+<hr>
+
+<h2>1. Resumen de la Muestra Analizada</h2>
+
+<table>
+  <tr><th>Métrica</th><th>Valor</th></tr>
+  <tr><td>Duración de la muestra</td><td>≈ 98 segundos</td></tr>
+  <tr><td>Queries totales</td><td>82</td></tr>
+  <tr><td>QPS aproximado</td><td>≈ 0.83</td></tr>
+  <tr><td>Threads activos</td><td>2</td></tr>
+</table>
+
+<hr>
+
+<h2>2. Distribución de Carga por Thread</h2>
+
+<table>
+  <tr>
+    <th>Thread</th>
+    <th>Queries</th>
+    <th>Requestlist avg</th>
+    <th>Requestlist max</th>
+  </tr>
+  <tr>
+    <td>thread0</td>
+    <td>51</td>
+    <td>2.64</td>
+    <td>24</td>
+  </tr>
+  <tr>
+    <td>thread1</td>
+    <td>31</td>
+    <td>0.38</td>
+    <td>3</td>
+  </tr>
+</table>
+
+<div class="warn">
+Se detecta un micro-burst concentrado en thread0. No se observaron drops,
+sobrescrituras ni saturación.
+</div>
+
+<hr>
+
+<h2>3. Caché y Prefetch</h2>
+
+<table>
+  <tr><th>Métrica</th><th>Valor</th></tr>
+  <tr><td>Cache hits</td><td>1</td></tr>
+  <tr><td>Cache misses</td><td>81</td></tr>
+  <tr><td>Prefetch</td><td>0</td></tr>
+</table>
+
+<p>
+El bajo ratio de cache-hit es coherente con un diseño donde el CORE recibe
+principalmente consultas únicas provenientes de una capa de caché frontal.
+</p>
+
+<hr>
+
+<h2>4. Latencia de Resolución Recursiva</h2>
+
+<table>
+  <tr><th>Métrica</th><th>Valor</th></tr>
+  <tr><td>Latencia mediana</td><td>≈ 59 ms</td></tr>
+  <tr><td>Latencia media</td><td>≈ 92 ms</td></tr>
+</table>
+
+<p>
+Las latencias observadas corresponden a resolución recursiva completa
+(root → TLD → autoritativo) y se consideran saludables.
+</p>
+
+<hr>
+
+<h2>5. Señales de Estrés Operativo</h2>
+
+<table>
+  <tr><th>Indicador</th><th>Valor</th></tr>
+  <tr><td>requestlist.exceeded</td><td>0</td></tr>
+  <tr><td>requestlist.overwritten</td><td>0</td></tr>
+  <tr><td>tcpusage</td><td>0</td></tr>
+  <tr><td>Rate limiting</td><td>0</td></tr>
+</table>
+
+<p class="ok">
+No se detectan señales de estrés, saturación ni degradación de servicio.
+</p>
+
+<hr>
+
+<div class="good">
+<h2>Conclusión Final – CORE DNS</h2>
+<p>
+El resolvedor Unbound presenta un <strong>estado de salud excelente</strong>.
+El sistema absorbe picos puntuales sin degradación, mantiene latencias
+estables y opera con amplio margen de capacidad.
+</p>
+
+<p>
+Los datos analizados indican un CORE correctamente dimensionado,
+bien aislado y coherente con un diseño de caché en capas.
+</p>
+</div>
+
+</body>
+</html>
